@@ -1131,9 +1131,9 @@ void MapPort()
 // The first name is used as information source for addrman.
 // The second name should resolve to a list of seed addresses.
 static const char *strDNSSeed[][2] = {
-        {"194.135.95.138", "194.135.95.138"},
-	{"wyvern.ch", "mainnet.wyvern.ch"},
-	{"projectwyvern.com","seed.projectwyvern.com"},
+	{"mainnet.wyvern.ch"          , "mainnet.wyvern.ch"},
+  {"mainneta.projectwyvern.com" , "mainneta.projectwyvern.com"},
+  {"mainnetb.projectwyvern.com" , "mainnetb.projectwyvern.com"},
 };
 
 void ThreadDNSAddressSeed(void* parg)
