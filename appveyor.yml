@@ -1,0 +1,87 @@
+install:
+  - cmd: set QTDIR=C:\Qt\5.9\mingw53_32
+  - cmd: set PATH=C:\MinGW\msys\1.0\bin;%PATH%;%QTDIR%\bin;C:\MinGW\bin
+  - choco install -y innosetup
+  - cd C:/projects/wyvern
+  - mkdir platforms
+  - cd C:\MinGW\bin
+  - cp libgcc_s_dw2-1.dll C:/projects/wyvern
+  - cp libstdc++-6.dll C:/projects/wyvern
+  - cd C:/Qt/5.9/mingw53_32
+  - cp bin/Qt5Core.dll C:/projects/wyvern
+  - cp bin/Qt5Gui.dll C:/projects/wyvern
+  - cp bin/Qt5Widgets.dll C:/projects/wyvern
+  - cp bin/libEGL.dll C:/projects/wyvern
+  - cp plugins/platforms/qwindows.dll C:/projects/wyvern/platforms
+  - cd C:/
+  - mkdir deps
+  - cd deps
+  - curl -fsSL -o boost_1_55_0.7z http://sourceforge.net/projects/boost/files/boost/1.55.0/boost_1_55_0.7z
+  - 7z x boost_1_55_0.7z -oboost
+  - mv boost/boost_1_55_0 boost_1_55_0
+  - cd boost_1_55_0
+  - bootstrap.bat mingw
+  - echo .\\b2 install cxxflags="-std=c++11 -D__COMO_VERSION__" --prefix=c:/deps/boost_1_55_0 toolset=gcc > run.sh
+  - echo exit 0 >> run.sh
+  - type run.sh
+  - sh ".\run.sh"
+  - cd C:/deps
+  - curl -fsSL -o openssl-1.0.2l.tar.gz https://www.openssl.org/source/openssl-1.0.2l.tar.gz
+  - 7z x openssl-1.0.2l.tar.gz -oopenssl
+  - 7z x openssl/openssl-1.0.2l.tar -oopenssl
+  - mv openssl/openssl-1.0.2l openssl-1.0.1j
+  - cd openssl-1.0.1j
+  - cmd: set MAKE=mingw32-make
+  - sh ./Configure --prefix=$PWD/dist no-idea no-mdc2 no-rc5 shared mingw
+  - mingw32-make depend
+  - mingw32-make
+  - cd C:/deps
+  - curl -fsSL -o db-4.8.30.NC-mgw.tar.gz http://download.oracle.com/berkeley-db/db-4.8.30.NC.tar.gz
+  - 7z x db-4.8.30.NC-mgw.tar.gz -odb
+  - 7z x db/db-4.8.30.NC-mgw.tar -odb
+  - mv db/db-4.8.30.NC db-4.8.30.NC
+  - cd db-4.8.30.NC
+  - curl -fsSL -o db-4.8.30-fix-for-mingw.patch https://gist.githubusercontent.com/kobake/2761506fc958f8bf07601d00dea01470/raw/805e58ee669c9d3f7214091c816c1a6257d5407d/db-4.8.30-fix-for-mingw.patch
+  - patch -p1 <db-4.8.30-fix-for-mingw.patch
+  - cd build_unix
+  - sh ../dist/configure --enable-mingw --enable-cxx --disable-replication --disable-pthread_api --disable-shared --build=mingw32
+  - mingw32-make -j8
+  - cd C:/deps
+  - curl -fsSL -o miniupnpc-1.6-mgw.tar.gz http://miniupnp.tuxfamily.org/files/download.php?file=miniupnpc-1.6.tar.gz
+  - 7z x miniupnpc-1.6-mgw.tar.gz -otemp
+  - 7z x temp/miniupnpc-1.6-mgw.tar -otemp
+  - mv temp/miniupnpc-1.6 miniupnpc
+  - cd miniupnpc
+  - mingw32-make -j8 -f Makefile.mingw init upnpc-static
+
+build_script:
+  - cd /projects/wyvern
+  - cd src
+  - mingw32-make -f makefile.unix clean
+  - cd leveldb
+  - mingw32-make clean
+  - cd ../..
+  - cmd: set USE-UPNP=1
+  - qmake wyvern-qt.pro
+  - mingw32-make -j8
+  - iscc wyvern.iss /Oinstaller
+
+artifacts:
+  - path: release/wyvern-qt.exe
+    name: wyvern-qt
+  - path: installer
+    name: installer
+  - path: Qt5Core.dll
+    name: Qt5Core.dll
+  - path: Qt5Gui.dll
+    name: Qt5Gui.dll
+  - path: Qt5Widgets.dll
+    name: Qt5Widgets.dll
+  - path: libgcc_s_dw2-1.dll
+    name: libgcc_s_dw2-1.dll
+  - path: libstdc++-6.dll
+    name: libstdc++-6.dll
+  - path: libEGL.dll
+    name: libEGL.dll
+  - path: platforms/qwindows.dll
+    name: platforms/qwindows.dll

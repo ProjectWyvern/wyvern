@@ -15,7 +15,9 @@
 #include <boost/asio.hpp>
 #include <boost/asio/ip/v6_only.hpp>
 #include <boost/bind.hpp>
+#define BOOST_NO_CXX11_SCOPED_ENUMS
 #include <boost/filesystem.hpp>
+#undef BOOST_NO_CXX11_SCOPED_ENUMS
 #include <boost/foreach.hpp>
 #include <boost/iostreams/concepts.hpp>
 #include <boost/iostreams/stream.hpp>

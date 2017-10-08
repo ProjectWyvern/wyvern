@@ -6,7 +6,9 @@
 #include "walletdb.h"
 #include "wallet.h"
 #include <boost/version.hpp>
+#define BOOST_NO_CXX11_SCOPED_ENUMS
 #include <boost/filesystem.hpp>
+#undef BOOST_NO_CXX11_SCOPED_ENUMS
 
 using namespace std;
 using namespace boost;

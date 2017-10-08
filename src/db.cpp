@@ -8,7 +8,9 @@
 #include "util.h"
 #include "main.h"
 #include "ui_interface.h"
+#define BOOST_NO_CXX11_SCOPED_ENUMS
 #include <boost/filesystem.hpp>
+#undef BOOST_NO_CXX11_SCOPED_ENUMS
 #include <boost/filesystem/fstream.hpp>
 
 #ifndef WIN32

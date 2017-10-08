@@ -10,7 +10,9 @@
 #include "util.h"
 #include "ui_interface.h"
 #include "checkpoints.h"
+#define BOOST_NO_CXX11_SCOPED_ENUMS
 #include <boost/filesystem.hpp>
+#undef BOOST_NO_CXX11_SCOPED_ENUMS
 #include <boost/filesystem/fstream.hpp>
 #include <boost/filesystem/convenience.hpp>
 #include <boost/interprocess/sync/file_lock.hpp>

@@ -7,7 +7,7 @@ DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE HAVE_CXX_STDHEADE
 CONFIG += no_include_pwd
 CONFIG += thread
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
-lessThan(QT_MAJOR_VERSION, 5): CONFIG += static
+CONFIG += static
 QMAKE_CXXFLAGS = -fpermissive
 
 greaterThan(QT_MAJOR_VERSION, 4) {
@@ -16,9 +16,9 @@ greaterThan(QT_MAJOR_VERSION, 4) {
 }
 
 win32 {
-BOOST_LIB_SUFFIX=-mgw49-mt-s-1_55
+BOOST_LIB_SUFFIX=-mgw53-mt-1_55
 BOOST_INCLUDE_PATH=C:/deps/boost_1_55_0
-BOOST_LIB_PATH=C:/deps/boost_1_55_0/stage/lib
+BOOST_LIB_PATH=C:/deps/boost_1_55_0/lib
 BDB_INCLUDE_PATH=C:/deps/db-4.8.30.NC/build_unix
 BDB_LIB_PATH=C:/deps/db-4.8.30.NC/build_unix
 OPENSSL_INCLUDE_PATH=C:/deps/openssl-1.0.1j/include
@@ -27,6 +27,7 @@ MINIUPNPC_INCLUDE_PATH=C:/deps/
 MINIUPNPC_LIB_PATH=C:/deps/miniupnpc
 QRENCODE_INCLUDE_PATH=C:/deps/qrencode-3.4.4
 QRENCODE_LIB_PATH=C:/deps/qrencode-3.4.4/.libs
+DEFINES += QT_STATIC_BUILD
 }
 
 
@@ -43,6 +44,8 @@ QRENCODE_LIB_PATH=C:/deps/qrencode-3.4.4/.libs
 OBJECTS_DIR = build
 MOC_DIR = build
 UI_DIR = build
+
+LIBS += -Bstatic
 
 # use: qmake "RELEASE=1"
 contains(RELEASE, 1) {
@@ -65,7 +68,6 @@ QMAKE_LFLAGS *= -fstack-protector-all --param ssp-buffer-size=1
 # for extra security on Windows: enable ASLR and DEP via GCC linker flags
 win32:QMAKE_LFLAGS *= -Wl,--large-address-aware -static
 win32:QMAKE_LFLAGS += -static-libgcc -static-libstdc++
-lessThan(QT_MAJOR_VERSION, 5): win32: QMAKE_LFLAGS *= -static
 
 # use: qmake "USE_QRCODE=1"
 # libqrencode (http://fukuchi.org/works/qrencode/index.en.html) must be installed for support
@@ -135,7 +137,7 @@ SOURCES += src/txdb-leveldb.cpp \
         QMAKE_RANLIB = $$replace(QMAKE_STRIP, strip, ranlib)
     }
     LIBS += -lshlwapi
-    #genleveldb.commands = cd $$PWD/src/leveldb && CC=$$QMAKE_CC CXX=$$QMAKE_CXX TARGET_OS=OS_WINDOWS_CROSSCOMPILE $(MAKE) OPT=\"$$QMAKE_CXXFLAGS $$QMAKE_CXXFLAGS_RELEASE\" libleveldb.a libmemenv.a && $$QMAKE_RANLIB $$PWD/src/leveldb/libleveldb.a && $$QMAKE_RANLIB $$PWD/src/leveldb/libmemenv.a
+    genleveldb.commands = cd $$PWD/src/leveldb && CC=$$QMAKE_CC CXX=$$QMAKE_CXX TARGET_OS=OS_WINDOWS_CROSSCOMPILE $(MAKE) OPT=\"$$QMAKE_CXXFLAGS $$QMAKE_CXXFLAGS_RELEASE\" libleveldb.a libmemenv.a && $$QMAKE_RANLIB $$PWD/src/leveldb/libleveldb.a && $$QMAKE_RANLIB $$PWD/src/leveldb/libmemenv.a
 }
 genleveldb.target = $$PWD/src/leveldb/libleveldb.a
 genleveldb.depends = FORCE
@@ -440,15 +442,19 @@ macx:TARGET = "wyvern-Qt"
 macx:QMAKE_CFLAGS_THREAD += -pthread
 macx:QMAKE_LFLAGS_THREAD += -pthread
 macx:QMAKE_CXXFLAGS_THREAD += -pthread
+windows:QMAKE_CFLAGS_THREAD += -pthread
+windows:QMAKE_LFLAGS_THREAD += -pthread
+windows:QMAKE_CXXFLAGS_THREAD += -pthread
 
 # Set libraries and includes at end, to use platform-defined defaults if not overridden
 INCLUDEPATH += $$BOOST_INCLUDE_PATH $$BDB_INCLUDE_PATH $$OPENSSL_INCLUDE_PATH $$QRENCODE_INCLUDE_PATH
 LIBS += $$join(BOOST_LIB_PATH,,-L,) $$join(BDB_LIB_PATH,,-L,) $$join(OPENSSL_LIB_PATH,,-L,) $$join(QRENCODE_LIB_PATH,,-L,)
-LIBS += -lssl -lcrypto -ldb_cxx$$BDB_LIB_SUFFIX
+LIBS += -lssl -lcrypto -ldb_cxx$$BDB_LIB_SUFFIX -lpthread
 # -lgdi32 has to happen after -lcrypto (see  #681)
 windows:LIBS += -lws2_32 -lshlwapi -lmswsock -lole32 -loleaut32 -luuid -lgdi32
 LIBS += -lboost_system$$BOOST_LIB_SUFFIX -lboost_filesystem$$BOOST_LIB_SUFFIX -lboost_program_options$$BOOST_LIB_SUFFIX -lboost_thread$$BOOST_THREAD_LIB_SUFFIX
 windows:LIBS += -lboost_chrono$$BOOST_LIB_SUFFIX
+windows:LIBS += -static-libgcc -static-libstdc++
 
 contains(RELEASE, 1) {
     !windows:!macx {
