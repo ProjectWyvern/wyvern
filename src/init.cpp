@@ -18,6 +18,8 @@
 #include <boost/interprocess/sync/file_lock.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <openssl/crypto.h>
+#include "zmq/zmqnotificationinterface.h"
+#include "validationinterface.h"
 
 #ifndef WIN32
 #include <signal.h>
@@ -37,6 +39,8 @@ unsigned int nDerivationMethodIndex;
 unsigned int nMinerSleep;
 bool fUseFastIndex;
 enum Checkpoints::CPMode CheckpointsMode;
+
+static CZMQNotificationInterface* pzmqNotificationInterface = NULL;
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -85,6 +89,11 @@ void Shutdown(void* parg)
         fShutdown = true;
         nTransactionsUpdated++;
 //        CTxDB().Close();
+        if (pzmqNotificationInterface) {
+            UnregisterValidationInterface(pzmqNotificationInterface);
+            delete pzmqNotificationInterface;
+            pzmqNotificationInterface = NULL;
+        }
         bitdb.Flush(false);
         StopNode();
         bitdb.Flush(true);
@@ -423,6 +432,12 @@ bool AppInit2()
         // Rewrite just private keys: rescan to find transactions
         SoftSetBoolArg("-rescan", true);
     }
+
+    pzmqNotificationInterface = CZMQNotificationInterface::CreateWithArguments(mapArgs);
+
+    if (pzmqNotificationInterface) {
+        RegisterValidationInterface(pzmqNotificationInterface);
+    }    
 
     // ********************************************************* Step 3: parameter-to-internal-flags
 

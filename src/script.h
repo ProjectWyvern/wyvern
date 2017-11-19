@@ -584,6 +584,8 @@ public:
     {
         return CScriptID(Hash160(*this));
     }
+  
+    bool IsPayToPublicKeyHash() const;
 };
 
 

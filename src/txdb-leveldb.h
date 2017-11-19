@@ -7,6 +7,8 @@
 #define WYVERN_LEVELDB_H
 
 #include "main.h"
+#include "base58.h"
+#include "serialize.h"
 
 #include <map>
 #include <string>
@@ -14,6 +16,17 @@
 
 #include <leveldb/db.h>
 #include <leveldb/write_batch.h>
+
+struct CAddressIndexKey;
+struct CAddressIndexIteratorKey;
+struct CAddressIndexIteratorHeightKey;
+struct CAddressUnspentKey;
+struct CAddressUnspentValue;
+
+static const char DB_ADDRESSINDEX = 'a';
+static const char DB_TIMESTAMPINDEX = 's';
+static const char DB_ADDRESSUNSPENTINDEX = 'u';
+static const char DB_SPENTINDEX = 'p';
 
 // Class that provides access to a LevelDB. Note that this class is frequently
 // instantiated on the stack and then destroyed again, so instantiation has to
@@ -202,6 +215,18 @@ public:
     bool ReadCheckpointPubKey(std::string& strPubKey);
     bool WriteCheckpointPubKey(const std::string& strPubKey);
     bool LoadBlockIndex();
+
+    bool WriteAddressIndex(const std::vector<std::pair<CAddressIndexKey, int64_t> > &vect);
+    bool ReadAddressIndex(uint160 addressHash, int type, std::vector<std::pair<CAddressIndexKey, int64_t> > &addressIndex, int start = 0, int end = 0);
+    bool EraseAddressIndex(const std::vector<std::pair<CAddressIndexKey, int64_t> > &vect);
+    bool WriteTimestampIndex(const CTimestampIndexKey &timestampIndex);
+    bool ReadTimestampIndex(const unsigned int &high, const unsigned int &low, std::vector<uint256> &vect);
+    bool UpdateAddressUnspentIndex(const std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue > >&vect);
+    bool ReadAddressUnspentIndex(uint160 addressHash, int type,
+                                 std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > &vect);
+    bool ReadSpentIndex(CSpentIndexKey &key, CSpentIndexValue &value);
+    bool UpdateSpentIndex(const std::vector<std::pair<CSpentIndexKey, CSpentIndexValue> >&vect);
+
 private:
     bool LoadBlockIndexGuts();
 };

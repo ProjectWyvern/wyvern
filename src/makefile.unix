@@ -31,7 +31,8 @@ LIBS += \
    -l boost_thread$(BOOST_LIB_SUFFIX) \
    -l db_cxx$(BDB_LIB_SUFFIX) \
    -l ssl \
-   -l crypto
+   -l crypto \
+   -l zmq
 
 ifndef USE_UPNP
 	override USE_UPNP = -
@@ -104,6 +105,7 @@ xCXXFLAGS=-O2 $(EXT_OPTIONS) -pthread -Wall -Wextra -Wno-ignored-qualifiers -Wfo
 xLDFLAGS=$(LDHARDENING) $(LDFLAGS)
 
 OBJS= \
+    obj/validationinterface.o \
     obj/groestl.o \
     obj/blake.o \
     obj/skein.o \
@@ -142,7 +144,10 @@ OBJS= \
     obj/scrypt.o \
     obj/scrypt-arm.o \
     obj/scrypt-x86.o \
-    obj/scrypt-x86_64.o
+    obj/scrypt-x86_64.o \
+    obj/zmq/zmqabstractnotifier.o \
+    obj/zmq/zmqnotificationinterface.o \
+    obj/zmq/zmqpublishnotifier.o
 
 all: wyvernd
 
@@ -185,6 +190,13 @@ obj/%.o: %.cpp
 	      -e '/^$$/ d' -e 's/$$/ :/' < $(@:%.o=%.d) >> $(@:%.o=%.P); \
 	  rm -f $(@:%.o=%.d)
 
+obj/zmq/%.o: zmq/%.cpp
+	$(CXX) -c $(xCXXFLAGS) -MMD -MF $(@:%.o=%.d) -o $@ $<
+	@cp $(@:%.o=%.d) $(@:%.o=%.P); \
+	  sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
+	      -e '/^$$/ d' -e 's/$$/ :/' < $(@:%.o=%.d) >> $(@:%.o=%.P); \
+	  rm -f $(@:%.o=%.d)
+
 wyvernd: $(OBJS:obj/%=obj/%)
 	$(LINK) $(xCXXFLAGS) -o $@ $^ $(xLDFLAGS) $(LIBS)
 
@@ -192,6 +204,8 @@ clean:
 	-rm -f wyvernd
 	-rm -f obj/*.o
 	-rm -f obj/*.P
+	-rm -f obj/zmq/*.o
+	-rm -f obj/zmq/*.t
 	-rm -f obj/build.h
 
 FORCE:

@@ -308,6 +308,12 @@ static const CRPCCommand vRPCCommands[] =
     { "resendtx",               &resendtx,               false,  true},
     { "makekeypair",            &makekeypair,            false,  true},
     { "sendalert",              &sendalert,              false,  false},
+    { "getaddresstxids",        &getaddresstxids,        true,   false },
+    { "getaddressbalance",      &getaddressbalance,      true,   false },
+    { "getblockhashes",         &getblockhashes,         true,   false },
+    { "getaddressutxos",        &getaddressutxos,        true,   false },
+    { "getaddressmempool",      &getaddressmempool,      true,   false },
+    { "getspentinfo",           &getspentinfo,           true,   false },
 };
 
 CRPCTable::CRPCTable()
@@ -956,7 +962,7 @@ static Object JSONRPCExecOne(const Value& req)
         rpc_result = JSONRPCReplyObj(Value::null,
                                      JSONRPCError(RPC_PARSE_ERROR, e.what()), jreq.id);
     }
-
+        
     return rpc_result;
 }
 
@@ -1036,7 +1042,6 @@ void ThreadRPCServer3(void* parg)
                 jreq.parse(valRequest);
 
                 Value result = tableRPC.execute(jreq.strMethod, jreq.params);
-
                 // Send reply
                 strReply = JSONRPCReply(result, Value::null, jreq.id);
 

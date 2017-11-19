@@ -247,6 +247,7 @@ public:
     }
 
     bool operator==(const CBase58Data& b58) const { return CompareTo(b58) == 0; }
+    bool operator!=(const CBase58Data& b58) const { return CompareTo(b58) != 0; }
     bool operator<=(const CBase58Data& b58) const { return CompareTo(b58) <= 0; }
     bool operator>=(const CBase58Data& b58) const { return CompareTo(b58) >= 0; }
     bool operator< (const CBase58Data& b58) const { return CompareTo(b58) <  0; }
@@ -281,6 +282,11 @@ public:
         PUBKEY_ADDRESS_TEST = 41,
         SCRIPT_ADDRESS_TEST = 89,
     };
+
+    IMPLEMENT_SERIALIZE (
+        READWRITE(nVersion);
+        READWRITE(vchData);
+    )
 
     bool Set(const CKeyID &id) {
         SetData(fTestNet ? PUBKEY_ADDRESS_TEST : PUBKEY_ADDRESS, &id, 20);
@@ -375,6 +381,26 @@ public:
             uint160 id;
             memcpy(&id, &vchData[0], 20);
             keyID = CKeyID(id);
+            return true;
+        }
+        default: return false;
+        }
+    }
+
+    bool GetIndexKey(uint160& key, int& type) {
+        if (!IsValid())
+            return false;
+        switch(nVersion) {
+        case PUBKEY_ADDRESS:
+        case PUBKEY_ADDRESS_TEST: {
+            memcpy(&key, &vchData[0], 20);
+            type = 1;
+            return true;
+        }
+        case SCRIPT_ADDRESS:
+        case SCRIPT_ADDRESS_TEST: {
+            memcpy(&key, &vchData[0], 20);
+            type = 2;
             return true;
         }
         default: return false;

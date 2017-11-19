@@ -573,3 +573,177 @@ bool CTxDB::LoadBlockIndex()
 
     return true;
 }
+
+bool CTxDB::WriteAddressIndex(const std::vector<std::pair<CAddressIndexKey, int64_t > >&vect) {
+
+    for (std::vector<std::pair<CAddressIndexKey, int64_t> >::const_iterator it=vect.begin(); it!=vect.end(); it++) {
+      if(!Write(make_pair(DB_ADDRESSINDEX, it->first), it->second))
+        return false;
+    }
+
+    return true;
+
+}
+
+bool CTxDB::ReadAddressIndex(uint160 addressHash, int type, std::vector<std::pair<CAddressIndexKey, int64_t> > &addressIndex, int start, int end) {
+
+    leveldb::Iterator* it = pdb->NewIterator(leveldb::ReadOptions());
+    
+    CDataStream ssStart(SER_DISK, CLIENT_VERSION); 
+    if (start != 0 && end != 0) {
+      std::pair<unsigned char, CAddressIndexIteratorHeightKey> startKey;
+      startKey = make_pair(DB_ADDRESSINDEX, CAddressIndexIteratorHeightKey(type, addressHash, start));
+      ssStart << startKey;
+    } else {
+      std::pair<unsigned char, CAddressIndexIteratorKey> startKey;
+      startKey = make_pair(DB_ADDRESSINDEX, CAddressIndexIteratorKey(type, addressHash));
+      ssStart << startKey;
+    }
+
+    it->Seek(ssStart.str());
+
+    while (it->Valid()) {
+      std::pair<unsigned char, CAddressIndexKey> key;
+      int64_t value;
+      
+      CDataStream ssKey(SER_DISK, CLIENT_VERSION);
+      ssKey.write(it->key().data(), it->key().size());
+      try { ssKey >> key; } catch (std::exception& e) { break; }
+
+      CDataStream ssVal(SER_DISK, CLIENT_VERSION);
+      ssVal.write(it->value().data(), it->value().size());
+      try { ssVal >> value; } catch (std::exception &e) { break; }
+
+      if (key.second.hashBytes != addressHash)
+        break;
+
+      if (end > 0 && key.second.blockHeight > end)
+        break;
+
+      addressIndex.push_back(make_pair(key.second, value));
+      it->Next();
+    }
+
+    if(!it->status().ok())
+      return error("failed to get address index value");
+  
+    return true;
+
+}
+
+bool CTxDB::EraseAddressIndex(const std::vector<std::pair<CAddressIndexKey, int64_t> >&vect) {
+
+    for (std::vector<std::pair<CAddressIndexKey, int64_t> >::const_iterator it=vect.begin(); it!=vect.end(); it++) {
+        if (!Erase(make_pair(DB_ADDRESSINDEX, it->first)))
+          return false;
+    }
+  
+    return true;
+
+}
+
+bool CTxDB::WriteTimestampIndex(const CTimestampIndexKey &timestampIndex) {
+    return Write(make_pair(DB_TIMESTAMPINDEX, timestampIndex), NULL);
+}
+
+bool CTxDB::ReadTimestampIndex(const unsigned int &high, const unsigned int &low, std::vector<uint256> &hashes) {
+
+    leveldb::Iterator* it = pdb->NewIterator(leveldb::ReadOptions());
+
+    CDataStream ssStart(SER_DISK, CLIENT_VERSION);
+    ssStart << make_pair(DB_TIMESTAMPINDEX, CTimestampIndexIteratorKey(low));
+
+    it->Seek(ssStart.str());
+
+    while (it->Valid()) {
+        std::pair<char, CTimestampIndexKey> key;
+ 
+        CDataStream ssKey(SER_DISK, CLIENT_VERSION);
+        ssKey.write(it->key().data(), it->key().size());
+        try { ssKey >> key; } catch (std::exception& e) { break; }
+   
+        if (key.first == DB_TIMESTAMPINDEX && key.second.timestamp <= high) {
+            hashes.push_back(key.second.blockHash);
+            it->Next();
+        } else {
+            break;
+        }
+    }
+
+    if(!it->status().ok())
+      return error("failed to get timestamp index value");
+  
+
+    return true;
+
+}
+
+bool CTxDB::UpdateAddressUnspentIndex(const std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue > >&vect) {
+    for (std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> >::const_iterator it=vect.begin(); it!=vect.end(); it++) {
+        bool res;
+        if (it->second.IsNull()) {
+            res = Erase(make_pair(DB_ADDRESSUNSPENTINDEX, it->first));
+        } else {
+            res = Write(make_pair(DB_ADDRESSUNSPENTINDEX, it->first), it->second);
+        }
+        if (!res)
+          return false;
+    }
+
+    return true;
+}
+
+bool CTxDB::ReadAddressUnspentIndex(uint160 addressHash, int type,
+                                           std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > &unspentOutputs) {
+
+    leveldb::Iterator* it = pdb->NewIterator(leveldb::ReadOptions());
+
+    CDataStream ssStart(SER_DISK, CLIENT_VERSION);
+    ssStart << make_pair(DB_ADDRESSUNSPENTINDEX, CAddressIndexIteratorKey(type, addressHash));
+
+    it->Seek(ssStart.str());
+
+    while (it->Valid()) {
+        std::pair<char,CAddressUnspentKey> key;
+
+        CDataStream ssKey(SER_DISK, CLIENT_VERSION);
+        ssKey.write(it->key().data(), it->key().size());
+        try { ssKey >> key; } catch (std::exception& e) { break; }
+ 
+        if (key.first == DB_ADDRESSUNSPENTINDEX && key.second.hashBytes == addressHash) {
+            CAddressUnspentValue nValue;
+
+            CDataStream ssVal(SER_DISK, CLIENT_VERSION);
+            ssVal.write(it->value().data(), it->value().size());
+            try { ssVal >> nValue; } catch (std::exception &e) { break; }
+
+            unspentOutputs.push_back(make_pair(key.second, nValue));
+            it->Next();
+        } else {
+            break;
+        }
+    }
+    
+    if(!it->status().ok())
+      return error("failed to get address uxto index value");
+
+    return true;
+}
+
+bool CTxDB::ReadSpentIndex(CSpentIndexKey &key, CSpentIndexValue &value) {
+    return Read(make_pair(DB_SPENTINDEX, key), value);
+}
+
+bool CTxDB::UpdateSpentIndex(const std::vector<std::pair<CSpentIndexKey, CSpentIndexValue> >&vect) {
+    for (std::vector<std::pair<CSpentIndexKey,CSpentIndexValue> >::const_iterator it=vect.begin(); it!=vect.end(); it++) {
+        bool res;
+        if (it->second.IsNull()) {
+            res = Erase(make_pair(DB_SPENTINDEX, it->first));
+        } else {
+            res = Write(make_pair(DB_SPENTINDEX, it->first), it->second);
+        }
+        if (!res)
+          return false;
+    }
+    return true;
+}
