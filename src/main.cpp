@@ -1497,17 +1497,18 @@ bool CBlock::DisconnectBlock(CTxDB& txdb, CBlockIndex* pindex)
         const uint256 txhash = tx.GetHash();
         for (unsigned int k = tx.vout.size(); k-- > 0;) {
             const CTxOut &out = tx.vout[k];
-            if (out.scriptPubKey.IsPayToScriptHash()) {
-                vector<unsigned char> hashBytes(out.scriptPubKey.begin()+2, out.scriptPubKey.begin()+22);
-                addressIndex.push_back(make_pair(CAddressIndexKey(2, uint160(hashBytes), pindex->nHeight, i, txhash, k, false), out.nValue));
-                addressUnspentIndex.push_back(make_pair(CAddressUnspentKey(2, uint160(hashBytes), txhash, k), CAddressUnspentValue()));
-            } else if (out.scriptPubKey.IsPayToPublicKeyHash()) {
-                vector<unsigned char> hashBytes(out.scriptPubKey.begin()+3, out.scriptPubKey.begin()+23);
-                addressIndex.push_back(make_pair(CAddressIndexKey(1, uint160(hashBytes), pindex->nHeight, i, txhash, k, false), out.nValue));
-                addressUnspentIndex.push_back(make_pair(CAddressUnspentKey(1, uint160(hashBytes), txhash, k), CAddressUnspentValue()));
-            } else {
-                continue;
+  
+            CTxDestination address;
+            if (ExtractDestination(out.scriptPubKey, address)) {
+              CwyvernAddress wyvAddr(address);
+              uint160 key;
+              int type;
+              if (wyvAddr.GetIndexKey(key, type)) {
+                addressIndex.push_back(make_pair(CAddressIndexKey(type, key, pindex->nHeight, i, txhash, k, false), out.nValue));
+                addressUnspentIndex.push_back(make_pair(CAddressUnspentKey(type, key, txhash, k), CAddressUnspentValue()));
+              }
             }
+
         }
     }
 
@@ -1524,16 +1525,16 @@ bool CBlock::DisconnectBlock(CTxDB& txdb, CBlockIndex* pindex)
                 const CTxIn input = tx.vin[j];
                 spentIndex.push_back(make_pair(CSpentIndexKey(input.prevout.hash, input.prevout.n), CSpentIndexValue()));
                 const CTxOut &prevout = tx.GetOutputFor(tx.vin[j], mapInputs);
-                if (prevout.scriptPubKey.IsPayToScriptHash()) {
-                    vector<unsigned char> hashBytes(prevout.scriptPubKey.begin()+2, prevout.scriptPubKey.begin()+22);
-                    addressIndex.push_back(make_pair(CAddressIndexKey(2, uint160(hashBytes), pindex->nHeight, i, txhash, j, true), prevout.nValue * -1));
-                    addressUnspentIndex.push_back(make_pair(CAddressUnspentKey(2, uint160(hashBytes), input.prevout.hash, input.prevout.n), CAddressUnspentValue(prevout.nValue, prevout.scriptPubKey, pindex->nHeight)));
-                } else if (prevout.scriptPubKey.IsPayToPublicKeyHash()) {
-                    vector<unsigned char> hashBytes(prevout.scriptPubKey.begin()+3, prevout.scriptPubKey.begin()+23);
-                    addressIndex.push_back(make_pair(CAddressIndexKey(1, uint160(hashBytes), pindex->nHeight, i, txhash, j, true), prevout.nValue * -1));
-                    addressUnspentIndex.push_back(make_pair(CAddressUnspentKey(1, uint160(hashBytes), input.prevout.hash, input.prevout.n), CAddressUnspentValue(prevout.nValue, prevout.scriptPubKey, pindex->nHeight)));
-                } else {
-                    continue;
+
+                CTxDestination address;
+                if (ExtractDestination(prevout.scriptPubKey, address)) {
+                  CwyvernAddress wyvAddr(address);
+                  uint160 key;
+                  int type;
+                  if (wyvAddr.GetIndexKey(key, type)) {
+                    addressIndex.push_back(make_pair(CAddressIndexKey(type, key, pindex->nHeight, i, txhash, j, true), prevout.nValue * -1));
+                    addressUnspentIndex.push_back(make_pair(CAddressUnspentKey(type, key, input.prevout.hash, input.prevout.n), CAddressUnspentValue(prevout.nValue, prevout.scriptPubKey, pindex->nHeight)));
+                  }
                 }
             }
         }
@@ -1662,25 +1663,19 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
             for (size_t j = 0; j < tx.vin.size(); j++) {
                 const CTxIn input = tx.vin[j];
                 const CTxOut &prevout = tx.GetOutputFor(tx.vin[j], mapInputs);
-                uint160 hashBytes;
-                int addressType;
 
-                if (prevout.scriptPubKey.IsPayToScriptHash()) {
-                    hashBytes = uint160(vector <unsigned char>(prevout.scriptPubKey.begin()+2, prevout.scriptPubKey.begin()+22));
-                    addressType = 2;
-                } else if (prevout.scriptPubKey.IsPayToPublicKeyHash()) {
-                    hashBytes = uint160(vector <unsigned char>(prevout.scriptPubKey.begin()+3, prevout.scriptPubKey.begin()+23));
-                    addressType = 1;
-                } else {
-                    hashBytes = uint160();
-                    addressType = 0;
+                CTxDestination address;
+                if (ExtractDestination(prevout.scriptPubKey, address)) {
+                  CwyvernAddress wyvAddr(address);
+                  uint160 key;
+                  int type;
+                  if (wyvAddr.GetIndexKey(key, type)) {
+                    spentIndex.push_back(make_pair(CSpentIndexKey(input.prevout.hash, input.prevout.n), CSpentIndexValue(txhash, j, pindex->nHeight, prevout.nValue, type, key)));
+                    addressIndex.push_back(make_pair(CAddressIndexKey(type, key, pindex->nHeight, txIndex, txhash, j, true), prevout.nValue * -1));
+                    addressUnspentIndex.push_back(make_pair(CAddressUnspentKey(type, key, input.prevout.hash, input.prevout.n), CAddressUnspentValue()));
+                  }
                 }
 
-                if (addressType > 0) {
-                  spentIndex.push_back(make_pair(CSpentIndexKey(input.prevout.hash, input.prevout.n), CSpentIndexValue(txhash, j, pindex->nHeight, prevout.nValue, addressType, hashBytes)));
-                  addressIndex.push_back(make_pair(CAddressIndexKey(addressType, uint160(hashBytes), pindex->nHeight, txIndex, txhash, j, true), prevout.nValue * -1));
-                  addressUnspentIndex.push_back(make_pair(CAddressUnspentKey(addressType, uint160(hashBytes), input.prevout.hash, input.prevout.n), CAddressUnspentValue()));
-                }
             }
             
         }
@@ -1688,16 +1683,15 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
         for (unsigned int k = 0; k < tx.vout.size(); k++) {
             const CTxOut &out = tx.vout[k];
 
-            if (out.scriptPubKey.IsPayToScriptHash()) {
-                vector<unsigned char> hashBytes(out.scriptPubKey.begin()+2, out.scriptPubKey.begin()+22);
-                addressIndex.push_back(make_pair(CAddressIndexKey(2, uint160(hashBytes), pindex->nHeight, txIndex, txhash, k, false), out.nValue));
-                addressUnspentIndex.push_back(make_pair(CAddressUnspentKey(2, uint160(hashBytes), txhash, k), CAddressUnspentValue(out.nValue, out.scriptPubKey, pindex->nHeight)));
-            } else if (out.scriptPubKey.IsPayToPublicKeyHash()) {
-                vector<unsigned char> hashBytes(out.scriptPubKey.begin()+3, out.scriptPubKey.begin()+23);
-                addressIndex.push_back(make_pair(CAddressIndexKey(1, uint160(hashBytes), pindex->nHeight, txIndex, txhash, k, false), out.nValue));
-                addressUnspentIndex.push_back(make_pair(CAddressUnspentKey(1, uint160(hashBytes), txhash, k), CAddressUnspentValue(out.nValue, out.scriptPubKey, pindex->nHeight)));
-            } else {
-                continue;
+            CTxDestination address;
+            if (ExtractDestination(out.scriptPubKey, address)) {
+              CwyvernAddress wyvAddr(address);
+              uint160 key;
+              int type;
+              if (wyvAddr.GetIndexKey(key, type)) {
+                addressIndex.push_back(make_pair(CAddressIndexKey(type, key, pindex->nHeight, txIndex, txhash, k, false), out.nValue));
+                addressUnspentIndex.push_back(make_pair(CAddressUnspentKey(type, key, txhash, k), CAddressUnspentValue(out.nValue, out.scriptPubKey, pindex->nHeight)));
+              }
             }
 
         }
@@ -4021,18 +4015,19 @@ void CTxMemPool::addSpentIndex(const CTransaction& tx, const MapPrevTx& mapInput
     for (unsigned int j = 0; j < tx.vin.size(); j++) {
         const CTxIn input = tx.vin[j];
         const CTxOut &prevout = tx.GetOutputFor(tx.vin[j], mapInputs);
-        uint160 addressHash;
-        int addressType;
 
-        if (prevout.scriptPubKey.IsPayToScriptHash()) {
-            addressHash = uint160(vector<unsigned char> (prevout.scriptPubKey.begin()+2, prevout.scriptPubKey.begin()+22));
-            addressType = 2;
-        } else if (prevout.scriptPubKey.IsPayToPublicKeyHash()) {
-            addressHash = uint160(vector<unsigned char> (prevout.scriptPubKey.begin()+3, prevout.scriptPubKey.begin()+23));
-            addressType = 1;
-        } else {
-            addressHash = uint160();
-            addressType = 0;
+        int addressType;
+        uint160 addressHash;
+
+        CTxDestination address;
+        if (ExtractDestination(prevout.scriptPubKey, address)) {
+          CwyvernAddress wyvAddr(address);
+          uint160 key;
+          int type;
+          if (wyvAddr.GetIndexKey(key, type)) {
+            addressType = type;
+            addressHash = key;
+          }
         }
 
         CSpentIndexKey key = CSpentIndexKey(input.prevout.hash, input.prevout.n);
