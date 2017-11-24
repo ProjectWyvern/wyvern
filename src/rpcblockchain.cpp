@@ -494,6 +494,50 @@ bool heightSort(std::pair<CAddressUnspentKey, CAddressUnspentValue> a,
     return a.second.blockHeight < b.second.blockHeight;
 }
 
+Value getallutxos(const Array& params, bool fHelp) {
+    if (fHelp || params.size() != 0)
+      throw runtime_error(
+            "getallutxos\n"
+            "\nReturns all unspent outputs for all addresses with unspent outputs (requires addressindex to be enabled).\n"
+          );
+
+    std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > utxos;
+
+    if (!GetAllUnspent(utxos))
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Unable to fetch utxos");
+    
+    Array arr;
+  
+    for (std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> >::const_iterator it = utxos.begin(); it != utxos.end(); it++) {
+        Object output;
+        std::string address;
+        if (it->first.type == 2) {
+            address = CwyvernAddress(CScriptID(it->first.hashBytes)).ToString();
+        } else if (it->first.type == 1) {
+            address = CwyvernAddress(CKeyID(it->first.hashBytes)).ToString();
+        } else {
+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Unknown address type");
+        }
+        output.push_back(Pair("address", address));
+        output.push_back(Pair("txid", it->first.txhash.GetHex()));
+        output.push_back(Pair("outputIndex", (int) it->first.index));
+        output.push_back(Pair("script", HexStr(it->second.script.begin(), it->second.script.end())));
+        output.push_back(Pair("satoshis", it->second.satoshis));
+        output.push_back(Pair("height", it->second.blockHeight));
+        arr.push_back(output);
+    }
+
+    {
+      Object ret;
+      ret.push_back(Pair("utxos", arr));
+      LOCK(cs_main);
+      ret.push_back(Pair("hash", pindexBest->phashBlock->GetHex()));
+      ret.push_back(Pair("height", (int)pindexBest->nHeight));
+      return ret;
+    }
+
+}
+
 Value getaddressutxos(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)

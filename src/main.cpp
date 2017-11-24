@@ -3925,6 +3925,17 @@ bool GetAddressUnspent(uint160 addressHash, int type,
     return true;
 }
 
+bool GetAllUnspent(std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > &utxos) {
+
+    CTxDB txdb("r");
+
+    if (!txdb.ReadAllUnspent(utxos))
+        return error("unable to get utxos");
+
+    return true;
+
+}
+
 void CTxMemPool::addAddressIndex(const CTransaction& tx, const MapPrevTx& mapInputs)
 {
     LOCK(cs);

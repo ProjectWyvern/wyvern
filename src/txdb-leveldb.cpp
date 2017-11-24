@@ -730,6 +730,43 @@ bool CTxDB::ReadAddressUnspentIndex(uint160 addressHash, int type,
     return true;
 }
 
+bool CTxDB::ReadAllUnspent(std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > &utxos) {
+
+  leveldb::Iterator* it = pdb->NewIterator(leveldb::ReadOptions());
+
+  CDataStream ssStart(SER_DISK, CLIENT_VERSION);
+  ssStart << DB_ADDRESSUNSPENTINDEX;
+
+  it->Seek(ssStart.str());
+
+  while (it->Valid()) {
+      std::pair<char,CAddressUnspentKey> key;
+
+      CDataStream ssKey(SER_DISK, CLIENT_VERSION);
+      ssKey.write(it->key().data(), it->key().size());
+      try { ssKey >> key; } catch (std::exception& e) { break; }
+ 
+      if (key.first == DB_ADDRESSUNSPENTINDEX) {
+          CAddressUnspentValue nValue;
+
+          CDataStream ssVal(SER_DISK, CLIENT_VERSION);
+          ssVal.write(it->value().data(), it->value().size());
+          try { ssVal >> nValue; } catch (std::exception &e) { break; }
+
+          utxos.push_back(make_pair(key.second, nValue));
+          it->Next();
+      } else {
+          break;
+      }   
+  }
+
+  if(!it->status().ok())
+      return error("failed to get utxos");
+ 
+  return true;
+
+}
+
 bool CTxDB::ReadSpentIndex(CSpentIndexKey &key, CSpentIndexValue &value) {
     return Read(make_pair(DB_SPENTINDEX, key), value);
 }

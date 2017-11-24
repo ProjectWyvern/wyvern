@@ -408,7 +408,7 @@ struct CAddressUnspentValue {
 bool GetAddressIndex(uint160 address, int type, std::vector<std::pair<CAddressIndexKey, int64_t> > &addressIndex, int start, int end);
 bool GetTimestampIndex(const unsigned int &high, const unsigned int &low, std::vector<uint256> &hashes);
 bool GetAddressUnspent(uint160 addressHash, int type, std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > &unspentOutputs);
-bool GetAddressUnspent(uint160 addressHash, int type, std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > &unspentOutputs);
+bool GetAllUnspent(std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > &utxos);
 bool GetSpentIndex(CSpentIndexKey &key, CSpentIndexValue &value);
 
 bool GetWalletFile(CWallet* pwallet, std::string &strWalletFileOut);

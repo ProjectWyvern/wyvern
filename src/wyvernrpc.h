@@ -222,6 +222,7 @@ extern json_spirit::Value getaddresstxids(const json_spirit::Array& params, bool
 extern json_spirit::Value getaddressbalance(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getblockhashes(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getaddressutxos(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value getallutxos(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getaddressmempool(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getspentinfo(const json_spirit::Array& params, bool fHelp);
 

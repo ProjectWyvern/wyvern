@@ -312,6 +312,7 @@ static const CRPCCommand vRPCCommands[] =
     { "getaddressbalance",      &getaddressbalance,      true,   false },
     { "getblockhashes",         &getblockhashes,         true,   false },
     { "getaddressutxos",        &getaddressutxos,        true,   false },
+    { "getallutxos",            &getallutxos,            true,   false },
     { "getaddressmempool",      &getaddressmempool,      true,   false },
     { "getspentinfo",           &getspentinfo,           true,   false },
 };
