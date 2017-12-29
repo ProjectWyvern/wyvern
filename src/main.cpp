@@ -1952,6 +1952,10 @@ bool CBlock::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos, const u
         pindexNew->nHeight = pindexNew->pprev->nHeight + 1;
     }
 
+    // Prevent chain extension beyond snapshot height
+    if (pindexNew->nHeight > SNAPSHOT_BLOCK)
+        return error("AddToBlockIndex() : not extending past snapshot block");
+
     // wyvern: compute chain trust score
     pindexNew->nChainTrust = (pindexNew->pprev ? pindexNew->pprev->nChainTrust : 0) + pindexNew->GetBlockTrust();
 
